@@ -29,53 +29,81 @@ function cacheImages(images) {
         }
     });
 }
-export default class UserSignUpScreen extends React.Component {
+
+export default class UserSocietyJoinScreen extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            checkMailInput: false,
-            checkNameInput: false,
-            checkPhoneInput: false,
-            password: "",
-            password2: "",
-            email: "",
-            phone: "",
-            name: "",
-            secureTextEntry: true,
-            secureTextEntry2: true,
+            checkFlatInput: false,
+            checkTowerInput: false,
+            checkVehicleInput: false,
+            checkFamilyInput: false,
+            flat: "",
+            tower: "",
+            vehicle: "",
+            family: "",
             imageIsReady: false,
             docId: "",
+            docId2: "",
         };
     }
-  userSignUp = async (email, password, confirmPass) => {
-      if (password !== confirmPass) {
-          Alert.alert("Two Password fields don't match");
-      } else if (
-          this.state.checkMailInput == false ||
-      this.state.checkPhoneInput == false ||
-      this.state.checkNameInput == false
+  userSignUp = async () => {
+      if (
+          this.state.checkFamilyInput == false ||
+      this.state.checkFlatInput == false ||
+      this.state.checkTowerInput == false ||
+      this.state.checkVehicleInput == false
       ) {
-          Alert.alert("Please fill all the details correctly");
+          Alert.alert("Please fill all the details");
       } else {
-          firebase
-              .auth()
-              .createUserWithEmailAndPassword(email, password)
-              .then(() => {
-                  db.collection("user").add({
-                      first_name: this.state.name,
-
-                      mobile_no: this.state.phone,
-
-                      email_id: this.state.email,
+          var email = firebase.auth().currentUser.email;
+          db.collection("user")
+              .where("email_id", "==", email)
+              .get()
+              .then((snapshot) => {
+                  snapshot.forEach((doc) => {
+                      this.setState({
+                          docId: doc.id,
+                      });
                   });
-
-                  Alert.alert("done");
-                  return this.props.navigation.navigate("SocietyLoginScreen");
-              })
-
-              .catch(function (error) {
-                  var errormsg = error.message;
-                  return console.warn(errormsg);
+                  db.collection("user").doc(this.state.docId).update({
+                      familyNo: this.state.family,
+                      flat: this.state.flat,
+                      tower: this.state.tower,
+                      vehicle: this.state.vehicle,
+                  });
+                  db.collection("user")
+                      .doc(this.state.docId)
+                      .get()
+                      .then((doc2) => {
+                          // Document was found in the cache. If no cached document exists,
+                          // an error will be returned to the 'catch' block below.
+                          console.warn("Cached document data:", doc2.data());
+                          db.collection("societies")
+                              .doc(doc2.data().pass)
+                              .collection("users")
+                              .where("userEmail", "==", email)
+                              .get()
+                              .then((snapshot) => {
+                                  snapshot.forEach((doc) => {
+                                      this.setState({ docId2: doc.id });
+                                  });
+                                  db.collection("societies")
+                                      .doc(doc2.data().pass)
+                                      .collection("users")
+                                      .doc(this.state.docId2)
+                                      .update({
+                                          FamilyNo: doc2.data().familyNo,
+                                          Flat: doc2.data().flat,
+                                          Tower: doc2.data().tower,
+                                          Vehicle: doc2.data().vehicle,
+                                      });
+                              });
+                      })
+                      .catch(function (error) {
+                          console.warn("Error getting cached document:", error);
+                      });
+                  this.props.navigation.navigate("HomeScreen");
               });
       }
   };
@@ -85,43 +113,55 @@ export default class UserSignUpScreen extends React.Component {
 
       await Promise.all([...imageAssets]);
   }
-  mailInputChange(text) {
-      if (text.length !== 0) {
+  flatInputChange(text) {
+      if (text.length >= 2) {
           this.setState({
-              checkMailInput: true,
-              email: text,
+              checkFlatInput: true,
+              flat: text,
           });
       } else {
           this.setState({
-              checkMailInput: false,
+              checkFlatInput: false,
           });
       }
   }
-  nameInputChange(text) {
-      if (text.length !== 0) {
+  towerInputChange(text) {
+      if (text.length >= 0) {
           this.setState({
-              checkNameInput: true,
-              name: text,
+              checkTowerInput: true,
+              tower: text,
           });
       } else {
           this.setState({
-              checkNameInput: false,
+              checkTowerInput: false,
           });
       }
   }
-  phoneInputChange(text) {
-      if (text.length !== 0 && text.length == 10 && isNaN(text) == false) {
+  familyInputChange(text) {
+      if (text.length >= 0) {
           this.setState({
-              checkPhoneInput: true,
-              phone: text,
+              checkFamilyInput: true,
+              family: text,
           });
       } else {
           this.setState({
-              checkPhoneInput: false,
+              checkFamilyInput: false,
           });
       }
   }
 
+  vehicleInputChange(text) {
+      if (text.length >= 0) {
+          this.setState({
+              checkVehicleInput: true,
+              vehicle: text,
+          });
+      } else {
+          this.setState({
+              checkVehicleInput: false,
+          });
+      }
+  }
   secureTextEntry() {
       this.setState({
           secureTextEntry: !this.state.secureTextEntry,
@@ -160,87 +200,32 @@ export default class UserSignUpScreen extends React.Component {
                       >
                           <AntDesign name="leftcircle" color="#05375a" size={30} />
                       </TouchableOpacity>
-                      <Text style={styles.footerText}>E-MAIL</Text>
+                      <Text style={styles.footerText}>Flat No.</Text>
                       <View style={styles.animation}>
                           <FontAwesome5 name="user-circle" color="#05375a" size={20} />
                           <TextInput
-                              placeholder="Your Email-ID"
+                              placeholder="Your Flat No."
                               style={styles.textInput}
-                              onChangeText={(text) => this.mailInputChange(text)}
+                              onChangeText={(text) => this.flatInputChange(text)}
                           />
-                          {this.state.checkMailInput ? (
+                          {this.state.checkFlatInput ? (
                               <Animatable.View animation="bounceIn">
                                   <Feather name="check-circle" color="green" size={20} />
                               </Animatable.View>
                           ) : null}
                       </View>
 
-                      <Text style={[styles.footerText, { marginTop: 35 }]}>Password</Text>
-                      <View style={styles.animation}>
-                          <FontAwesome5 name="lock" color="#05375a" size={20} />
-                          {this.state.secureTextEntry ? (
-                              <TextInput
-                                  secureTextEntry={true}
-                                  placeholder="Your Password"
-                                  style={styles.textInput}
-                                  value={this.state.password}
-                                  onChangeText={(text) => this.setState({ password: text })}
-                              />
-                          ) : (
-                              <TextInput
-                                  placeholder="Your Password"
-                                  style={styles.textInput}
-                                  value={this.state.password}
-                                  onChangeText={(text) => this.setState({ password: text })}
-                              />
-                          )}
-                          <TouchableOpacity onPress={() => this.secureTextEntry()}>
-                              {this.state.secureTextEntry ? (
-                                  <Feather name="eye-off" color="gray" size={20} />
-                              ) : (
-                                  <Feather name="eye" color="gray" size={20} />
-                              )}
-                          </TouchableOpacity>
-                      </View>
-
                       <Text style={[styles.footerText, { marginTop: 35 }]}>
-              Confirm Password
+              Tower Name
                       </Text>
                       <View style={styles.animation}>
-                          <FontAwesome5 name="lock" color="#05375a" size={20} />
-                          {this.state.secureTextEntry2 ? (
-                              <TextInput
-                                  secureTextEntry={true}
-                                  placeholder="Confirm Password"
-                                  style={styles.textInput}
-                                  value={this.state.password2}
-                                  onChangeText={(text) => this.setState({ password2: text })}
-                              />
-                          ) : (
-                              <TextInput
-                                  placeholder="Confirm Password"
-                                  style={styles.textInput}
-                                  value={this.state.password2}
-                                  onChangeText={(text) => this.setState({ password2: text })}
-                              />
-                          )}
-                          <TouchableOpacity onPress={() => this.secureTextEntry2()}>
-                              {this.state.secureTextEntry2 ? (
-                                  <Feather name="eye-off" color="gray" size={20} />
-                              ) : (
-                                  <Feather name="eye" color="gray" size={20} />
-                              )}
-                          </TouchableOpacity>
-                      </View>
-                      <Text style={[styles.footerText, { marginTop: 35 }]}>Name</Text>
-                      <View style={styles.animation}>
                           <FontAwesome5 name="user-circle" color="#05375a" size={20} />
                           <TextInput
-                              placeholder="Your Name"
+                              placeholder="Your Tower Name"
                               style={styles.textInput}
-                              onChangeText={(text) => this.nameInputChange(text)}
+                              onChangeText={(text) => this.towerInputChange(text)}
                           />
-                          {this.state.checkNameInput ? (
+                          {this.state.checkTowerInput ? (
                               <Animatable.View animation="bounceIn">
                                   <Feather name="check-circle" color="green" size={20} />
                               </Animatable.View>
@@ -248,16 +233,33 @@ export default class UserSignUpScreen extends React.Component {
                       </View>
 
                       <Text style={[styles.footerText, { marginTop: 35 }]}>
-              Phone No.
+              No. of family members
                       </Text>
                       <View style={styles.animation}>
                           <Entypo name="phone" color="#05375a" size={20} />
                           <TextInput
-                              placeholder="Your Contact Number"
+                              placeholder="No. of family members living"
                               style={styles.textInput}
-                              onChangeText={(text) => this.phoneInputChange(text)}
+                              onChangeText={(text) => this.familyInputChange(text)}
                           />
-                          {this.state.checkPhoneInput ? (
+                          {this.state.checkFamilyInput ? (
+                              <Animatable.View animation="bounceIn">
+                                  <Feather name="check-circle" color="green" size={20} />
+                              </Animatable.View>
+                          ) : null}
+                      </View>
+
+                      <Text style={[styles.footerText, { marginTop: 35 }]}>
+              Vehicle No.
+                      </Text>
+                      <View style={styles.animation}>
+                          <Entypo name="phone" color="#05375a" size={20} />
+                          <TextInput
+                              placeholder="Your vehice No."
+                              style={styles.textInput}
+                              onChangeText={(text) => this.vehicleInputChange(text)}
+                          />
+                          {this.state.checkVehicleInput ? (
                               <Animatable.View animation="bounceIn">
                                   <Feather name="check-circle" color="green" size={20} />
                               </Animatable.View>
@@ -273,13 +275,7 @@ export default class UserSignUpScreen extends React.Component {
                                       marginTop: 15,
                                   },
                               ]}
-                              onPress={() =>
-                                  this.userSignUp(
-                                      this.state.email,
-                                      this.state.password,
-                                      this.state.password2
-                                  )
-                              }
+                              onPress={() => this.userSignUp()}
                           >
                               <LinearGradient
                                   colors={["#5db8fe", "#39cff2"]}
